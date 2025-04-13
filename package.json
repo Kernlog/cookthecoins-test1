@@ -1,5 +1,5 @@
 {
-  "name": "cookthecoins-test1",
+  "name": "spl-ctc-airdrop-api",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
@@ -11,15 +11,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Kernlog/cookthecoins-test1.git"
+    "url": "git+https://github.com/Kernlog/spl-ctc-airdrop-api.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Kernlog/cookthecoins-test1/issues"
+    "url": "https://github.com/Kernlog/spl-ctc-airdrop-api/issues"
   },
-  "homepage": "https://github.com/Kernlog/cookthecoins-test1#readme",
+  "homepage": "https://github.com/Kernlog/spl-ctc-airdrop-api#readme",
   "dependencies": {
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.43.0",
