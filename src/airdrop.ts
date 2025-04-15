@@ -51,7 +51,7 @@ export async function transferTokens(
   amount: bigint = TRANSFER_AMOUNT
 ): Promise<string> {
   try {
-    console.log(`Transferring tokens for mint: ${mint.toString()}`);
+    console.log(`Transferring ${TOKENS_PER_AIRDROP} tokens (${amount} raw amount) for mint: ${mint.toString()}`);
     
     // Find the sender's token account for this mint
     const senderTokenAddress = await findTokenAccountsByMint(
@@ -77,7 +77,7 @@ export async function transferTokens(
     console.log(`Destination token account: ${destinationTokenAccount.address.toString()}`);
     
     // Create transfer instruction
-    console.log(`Creating transfer instruction for ${amount} tokens`);
+    console.log(`Creating transfer instruction for ${TOKENS_PER_AIRDROP} tokens (${amount} raw amount)`);
     const transferInstruction = createTransferInstruction(
       senderTokenAddress,
       destinationTokenAccount.address,

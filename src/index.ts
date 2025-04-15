@@ -3,11 +3,16 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import { airdropTokens } from './airdrop';
-import { isValidPublicKey } from './utils';
-import { PublicKey } from '@solana/web3.js';
+import { isValidPublicKey, getConnection, getKeypairFromPrivateKey } from './utils';
+import { PublicKey, Keypair, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
 import fs from 'fs';
 import path from 'path';
 import { getAccount } from '@solana/spl-token';
+import { 
+  getOrCreateAssociatedTokenAccount, 
+  createMintToInstruction,
+  TOKEN_PROGRAM_ID 
+} from '@solana/spl-token';
 
 // Load environment variables
 dotenv.config();
@@ -250,6 +255,113 @@ app.get('/reset-airdrop/:pubkey', (req, res) => {
   };
 
   resetAirdropHistory();
+});
+
+// Number of tokens to mint to refill the airdrop wallet (100 million)
+const TOKENS_TO_MINT = 100_000_000;
+// Handle decimal places for token (9 decimals is standard for Solana tokens)
+const MINT_DECIMALS = 9;
+// Amount to mint in smallest units (100,000,000 * 10^9)
+const MINT_AMOUNT = BigInt(TOKENS_TO_MINT) * BigInt(10 ** MINT_DECIMALS);
+
+// Admin key to secure the mint endpoint (should be set in .env)
+const ADMIN_KEY = process.env.ADMIN_KEY || 'your-secure-admin-key-here';
+
+// New endpoint to mint tokens to the airdrop wallet
+app.post('/mint-tokens', (req, res) => {
+  const mintTokens = async () => {
+    try {
+      const { adminKey } = req.body;
+
+      // Validate admin key
+      if (!adminKey || adminKey !== ADMIN_KEY) {
+        return res.status(401).json({
+          success: false,
+          message: 'Unauthorized: Invalid admin key'
+        });
+      }
+
+      // Get the airdrop wallet keypair
+      const privateKey = process.env.AIRDROP_WALLET_PRIVATE_KEY;
+      if (!privateKey) {
+        return res.status(500).json({
+          success: false,
+          message: 'Airdrop wallet private key not found in environment variables'
+        });
+      }
+
+      const connection = getConnection();
+      const airdroppWallet = getKeypairFromPrivateKey(privateKey);
+      console.log(`Minting tokens to airdrop wallet: ${airdroppWallet.publicKey.toString()}`);
+
+      const results = [];
+
+      // Mint tokens for each token type
+      for (const mintAddressStr of PREDEFINED_TOKEN_MINTS) {
+        try {
+          const mintAddress = new PublicKey(mintAddressStr);
+          console.log(`Processing mint for token: ${mintAddressStr}`);
+
+          // Get or create token account for the airdrop wallet
+          const tokenAccount = await getOrCreateAssociatedTokenAccount(
+            connection,
+            airdroppWallet,
+            mintAddress,
+            airdroppWallet.publicKey
+          );
+
+          console.log(`Token account: ${tokenAccount.address.toString()}`);
+
+          // Create mint instruction
+          const mintInstruction = createMintToInstruction(
+            mintAddress,
+            tokenAccount.address,
+            airdroppWallet.publicKey,
+            MINT_AMOUNT
+          );
+
+          // Create and send transaction
+          const transaction = new Transaction().add(mintInstruction);
+          const signature = await sendAndConfirmTransaction(
+            connection,
+            transaction,
+            [airdroppWallet]
+          );
+
+          console.log(`Minted ${TOKENS_TO_MINT} tokens to ${tokenAccount.address.toString()}, signature: ${signature}`);
+          
+          results.push({
+            mint: mintAddressStr,
+            success: true,
+            signature,
+            amount: TOKENS_TO_MINT
+          });
+        } catch (err: any) {
+          console.error(`Error minting tokens for ${mintAddressStr}:`, err);
+          results.push({
+            mint: mintAddressStr,
+            success: false,
+            error: err.message || 'Unknown error'
+          });
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Minted ${TOKENS_TO_MINT} tokens for each token type to the airdrop wallet`,
+        results
+      });
+    } catch (err: any) {
+      console.error('Error in mint-tokens endpoint:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Error minting tokens',
+        error: err.message || 'Unknown error'
+      });
+    }
+  };
+
+  mintTokens();
 });
 
 // Start server
