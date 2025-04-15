@@ -4,7 +4,7 @@ import {
   createTransferInstruction, 
   TOKEN_PROGRAM_ID 
 } from '@solana/spl-token';
-import { getConnection, getKeypairFromPrivateKey, chunkArray, sleep, isValidPublicKey } from './utils';
+import { getConnection, getKeypairFromPrivateKey, chunkArray, sleep, isValidPublicKey, findTokenAccountsByMint } from './utils';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -53,18 +53,17 @@ export async function transferTokens(
   try {
     console.log(`Transferring tokens for mint: ${mint.toString()}`);
     
-    // Find the existing token account for the sender
-    const senderAccounts = await connection.getParsedTokenAccountsByOwner(
+    // Find the sender's token account for this mint
+    const senderTokenAddress = await findTokenAccountsByMint(
+      connection,
       sender.publicKey,
-      { mint }
+      mint
     );
     
-    if (senderAccounts.value.length === 0) {
+    if (!senderTokenAddress) {
       throw new Error(`No token account found for mint ${mint.toString()} in the airdrop wallet`);
     }
     
-    // Use the first token account found
-    const senderTokenAddress = senderAccounts.value[0].pubkey;
     console.log(`Found sender token account: ${senderTokenAddress.toString()}`);
     
     // Get or create destination token account
