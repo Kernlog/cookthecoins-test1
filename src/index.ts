@@ -34,12 +34,13 @@ interface AirdropHistory {
 
 // Predefined token mints to airdrop
 const PREDEFINED_TOKEN_MINTS = [
-  "4nXvopN8X1HcJ2CeAkDdHvYDNay1htApA7F6De3yfN4Z", // SPICE
-  "Gw2cpQThbCK3crJwe3dcxwnEjoS7FcDUupHdAe75Hssv", // eNICE
-  "GZ61vSmanChTWd7CFXMQ4wMKYkU79PLysvy35f6Zdi1t", // CHMX
-  "9GVwhmLcJJ5vLqY9eQa7qXqtsbggFQFSL2iCfT969dvx", // eSALT
-  "5fpLARn6Qv1dgDXXyizTPsm1Abz4Kpr8UP45PAVbMx9b", // mBloom
-  "39hQsL7PJHnZZXt9cUyrfNJHc4iAxf5gXArdv9KPexhg"  // dORE
+  "SPCE6iLxvzex34CKUTCpZS6yKuCQ2WjmUKpMkVyM5oq", // SPICE
+  "eNCE6f7PKP5gZnQAvnsc5fU3pFLV32EK2uniy9bKtqj", // EVERYTHING NICE
+  "CHMXBBEJQtF86V83ZviMty4rnGRjETUfZtK4kyuVtFno", // CHEMICAL X
+  "embrvPr95mhmHeH1MBruG4uyaAqhjsZxpPYP1cuPM6b", // EMBER SALT
+  "moonPpxqwDtARANqx1VAnpSHwpGe2fmPm7QqujfjVgJ", // Moonpetal Bloom
+  "DoreKQVTy6oPWgmvBy4FmCoED6oFrLSME1yE8BRtgMp6", // devORE
+  "SUGAw9f4x8xBrgs4PwxCmzYFnRrVZ6ZU3XW2uDfEYxQ"  // SUGAR
 ];
 
 // Our airdrop wallet public key

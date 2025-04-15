@@ -84,27 +84,48 @@ export const findTokenAccountsByMint = async (
     );
     
     console.log(`Found ${tokenAccounts.value.length} token accounts for ${ownerAddress.toString()}`);
-    
-    // Filter to only get the token accounts for this mint
-    if (tokenAccounts.value.length > 0) {
-      for (const account of tokenAccounts.value) {
-        try {
-          // Get token account info
-          const accountInfo = await connection.getAccountInfo(account.pubkey);
-          
-          if (accountInfo && accountInfo.data.length >= 165) {
-            // Extract mint from token account (offset 0, length 32)
-            const accountMint = new PublicKey(accountInfo.data.slice(0, 32));
+
+    // Log all token accounts for debugging
+    for (let i = 0; i < tokenAccounts.value.length; i++) {
+      try {
+        const accountInfo = await connection.getAccountInfo(tokenAccounts.value[i].pubkey);
+        if (accountInfo && accountInfo.data.length >= 165) {
+          const data = accountInfo.data;
+          try {
+            const accountMint = new PublicKey(data.slice(0, 32));
+            console.log(`Token account ${i+1}: ${tokenAccounts.value[i].pubkey.toString()}, Mint: ${accountMint.toString()}`);
             
-            if (accountMint.equals(mintAddress)) {
-              console.log(`Found token account ${account.pubkey.toString()} for mint ${mintAddress.toString()}`);
-              return account.pubkey;
+            // Basic check by string comparison
+            if (accountMint.toString() === mintAddress.toString()) {
+              console.log(`Found token account ${tokenAccounts.value[i].pubkey.toString()} for mint ${mintAddress.toString()}`);
+              return tokenAccounts.value[i].pubkey;
             }
+          } catch (e) {
+            console.error(`Error parsing mint from token account ${i+1}:`, e);
           }
-        } catch (err) {
-          console.error(`Error checking token account:`, err);
+        } else {
+          console.log(`Token account ${i+1}: ${tokenAccounts.value[i].pubkey.toString()} - Invalid data format`);
         }
+      } catch (err) {
+        console.error(`Error checking token account ${i+1}:`, err);
       }
+    }
+
+    // Try using getOrCreateAssociatedTokenAccount as a fallback
+    try {
+      console.log(`Trying to get ATA for mint ${mintAddress.toString()}`);
+      const keypair = Keypair.generate(); // Dummy keypair just for the call
+      const associatedTokenAccount = await connection.getTokenAccountsByOwner(
+        ownerAddress,
+        { mint: mintAddress }
+      );
+      
+      if (associatedTokenAccount.value.length > 0) {
+        console.log(`Found associated token account: ${associatedTokenAccount.value[0].pubkey.toString()}`);
+        return associatedTokenAccount.value[0].pubkey;
+      }
+    } catch (e: any) {
+      console.log(`Error getting ATA: ${e.message}`);
     }
     
     console.log(`No token account found for mint ${mintAddress.toString()}`);
