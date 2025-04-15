@@ -1,6 +1,19 @@
 # Solana Token Airdrop Service
 
-A Node.js service that airdrops SPL tokens to specified wallets. This service accepts a base58 pubkey and an array of token mints, then sends 10,000 tokens of each mint to the specified pubkey.
+A Node.js service that airdrops six specific SPL tokens to a provided wallet address. Each time the endpoint is called, the recipient receives 10,000 tokens of each mint. A rate limit ensures each wallet can only receive tokens once every 24 hours.
+
+## Predefined Token Mints
+
+This service automatically airdrops 10,000 tokens of each of these mints:
+
+```
+SPCE6iLxvzex34CKUTCpZS6yKuCQ2WjmUKpMkVyM5oq
+eNCE6f7PKP5gZnQAvnsc5fU3pFLV32EK2uniy9bKtqj
+CHMXBBEJQtF86V83ZviMty4rnGRjETUfZtK4kyuVtFno
+embrvPr95mhmHeH1MBruG4uyaAqhjsZxpPYP1cuPM6b
+moonPpxqwDtARANqx1VAnpSHwpGe2fmPm7QqujfjVgJ
+DoreKQVTy6oPWgmvBy4FmCoED6oFrLSME1yE8BRtgMp6
+```
 
 ## Prerequisites
 
@@ -16,11 +29,11 @@ A Node.js service that airdrops SPL tokens to specified wallets. This service ac
    npm install
    ```
 
-2. **Generate Airdrop Wallet**:
+2. **Generate Airdrop Wallet** (optional, only if you want a new wallet):
    ```bash
    npx ts-node src/generate-wallet.ts
    ```
-   This will create a new wallet that will be used to send tokens. The output looks like:
+   Output example:
    ```
    Generated new Solana wallet:
    Public Key (address): DVYBF3usTgqye7vVTGz3H3vc7BYfg21AeGAxRadSWT7k
@@ -29,78 +42,47 @@ A Node.js service that airdrops SPL tokens to specified wallets. This service ac
 
 3. **Update .env file**:
    ```
-   PORT=3000
+   PORT=10000
    SOLANA_NETWORK=devnet
    AIRDROP_WALLET_PRIVATE_KEY=your_generated_private_key_here
    ```
 
-4. **Build the project** (optional for production):
+4. **Check Airdrop Wallet Balance**:
+   ```bash
+   npx ts-node src/check-airdrop-wallet.ts
+   ```
+   This will check if your airdrop wallet has sufficient tokens of all required mints.
+
+5. **Build the project** (optional for production):
    ```bash
    npm run build
    ```
 
-## Testing Workflow
+## Testing
 
-This project includes utility scripts that make it easy to test the entire airdrop flow from start to finish.
-
-### Complete Test Flow
-
-1. **Generate Sender Wallet**:
-   ```bash
-   npx ts-node src/generate-wallet.ts
-   ```
-   - Creates wallet.json
-   - Copy the private key to your .env file
-
-2. **Setup Test Tokens**:
-   ```bash
-   npx ts-node src/setup-test-tokens.ts
-   ```
-   - Requests SOL from devnet faucet
-   - Creates 3 test SPL tokens
-   - Mints 100,000 of each token to the sender wallet
-   - Saves token information to test-tokens.json
-
-3. **Generate Test Recipient**:
-   ```bash
-   npx ts-node src/generate-test-recipient.ts
-   ```
-   - Creates a recipient wallet (recipient-wallet.json)
-   - Outputs a ready-to-use curl command for testing
-
-4. **Start the Server**:
+1. **Start the Server**:
    ```bash
    npm run dev
    ```
 
-5. **Test the Airdrop**:
-   - Use the curl command provided by the generate-test-recipient script
-   - Or manually:
+2. **Test the Airdrop**:
    ```bash
-   curl -X POST http://localhost:3000/airdrop \
+   curl -X POST http://localhost:10000/airdrop \
      -H "Content-Type: application/json" \
-     -d '{"pubkey":"RECIPIENT_PUBKEY","pubkeys":["MINT1","MINT2","MINT3"]}'
+     -d '{"pubkey":"RECIPIENT_PUBKEY"}'
    ```
 
-6. **Check Recipient Balances**:
+3. **Check Airdrop Eligibility**:
    ```bash
-   npx ts-node src/check-balances.ts
+   curl http://localhost:10000/airdrop/check/RECIPIENT_PUBKEY
    ```
-   - Reads wallet information from recipient-wallet.json
-   - Reads token information from test-tokens.json
-   - Shows token balances for the recipient wallet
-   - Successful if recipient has 10,000 tokens of each mint
+   This endpoint will tell you if a wallet is eligible for an airdrop and if not, how much time remains.
 
-### Testing Without Setup Scripts
-
-If you already have:
-- A wallet with SOL on devnet
-- SPL tokens that you own
-
-You can:
-1. Set the private key in .env
-2. Start the server with `npm run dev`
-3. Send a POST request to /airdrop with your recipient and token mints
+4. **Generate Test Recipient** (optional, for testing):
+   ```bash
+   npx ts-node src/generate-test-recipient.ts
+   ```
+   This will create a test wallet to receive tokens and show a test command.
 
 ## API
 
@@ -109,36 +91,65 @@ You can:
 - Request body:
   ```json
   {
-    "pubkey": "8hy9PkuSmdfEJdN5zJ3FqytMn7AyzDRM3kkN74aRKoJQ",
-    "pubkeys": [
-      "3fN5Qowk5FYy1ZQnWpaWD34Rp4dVUN4qxBCoDv3PeQNR",
-      "5Gdzv8AYjT3RZVJzXAd9htZ5jM5QkJJDtwypxY9oLsbb"
-    ]
+    "pubkey": "8hy9PkuSmdfEJdN5zJ3FqytMn7AyzDRM3kkN74aRKoJQ"
   }
   ```
-- Response:
+- Response (Success):
   ```json
   {
     "success": true,
     "results": [
       {
-        "mint": "3fN5Qowk5FYy1ZQnWpaWD34Rp4dVUN4qxBCoDv3PeQNR",
+        "mint": "SPCE6iLxvzex34CKUTCpZS6yKuCQ2WjmUKpMkVyM5oq",
         "success": true,
         "signature": "5UAPzLUQWMTQTQDDBqGStSEQDhBWKBUyQHifzNcmna8fvzSJphbd5j9PP6SsGQG9et7vVTHqCXrXmVmULFpGELZ3"
       },
-      {
-        "mint": "5Gdzv8AYjT3RZVJzXAd9htZ5jM5QkJJDtwypxY9oLsbb",
-        "success": true,
-        "signature": "2vdJwM8rWJVMgsqKkKYJbk1hhzrygQ8gKdvnKTbxBcyGKMCEgDLDEVw9HsqB7ozXNNjCzVpX4JDLcL78aXBwxTXF"
-      }
+      ... // Results for other tokens
     ]
   }
   ```
+- Response (Rate Limited):
+  ```json
+  {
+    "success": false,
+    "message": "Rate limit exceeded: Only one airdrop allowed per wallet every 24 hours",
+    "timeRemaining": "23h 45m"
+  }
+  ```
+
+**Check Eligibility**
+- Endpoint: `GET /airdrop/check/:pubkey`
+- Response:
+  ```json
+  {
+    "pubkey": "8hy9PkuSmdfEJdN5zJ3FqytMn7AyzDRM3kkN74aRKoJQ",
+    "eligible": false,
+    "timeRemaining": "23h 45m"
+  }
+  ```
+
+## Rate Limiting
+
+- Each wallet can receive an airdrop only once every 24 hours
+- The service stores airdrop history in `airdrop-history.json` in the project root
+- Use the `/airdrop/check/:pubkey` endpoint to check if a wallet is eligible
+
+## Deployment to Render
+
+1. Create a Render account at [render.com](https://render.com)
+2. Create a new Web Service and link your GitHub repository
+3. Use the following settings:
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+4. Set the environment variables:
+   - `SOLANA_NETWORK`: `devnet`
+   - `AIRDROP_WALLET_PRIVATE_KEY`: Your wallet's private key
 
 ## Features
 
-- Airdrop multiple SPL tokens to a specified wallet
+- Airdrops six specific SPL tokens to a specified wallet
 - REST API endpoint for programmatic access
-- Configurable token amount (defaults to 10,000 tokens per mint)
+- Sends 10,000 tokens per mint
+- Rate limiting (one airdrop per wallet per 24 hours)
 - Built on Express.js with TypeScript
-- Devnet support (can be configured for mainnet)
+- Devnet support

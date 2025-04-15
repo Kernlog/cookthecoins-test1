@@ -1,50 +1,40 @@
 import { Keypair } from '@solana/web3.js';
-import fs from 'fs';
+import * as fs from 'fs';
 
-// Define interface for our JSON data
-interface TestTokens {
-  walletAddress: string;
-  tokenMints: string[];
-}
-
+// Interface for wallet data
 interface WalletData {
   publicKey: string;
   privateKey: string;
 }
 
-// Generate a new random keypair for the recipient
-const recipientKeypair = Keypair.generate();
+// Generate a new Solana keypair
+const keypair = Keypair.generate();
+const publicKey = keypair.publicKey.toString();
+const privateKey = Buffer.from(keypair.secretKey).toString('base64');
 
-// Get the public key (address)
-const publicKey = recipientKeypair.publicKey.toString();
+console.log(`Generated new test recipient wallet:`);
+console.log(`Public Key (address): ${publicKey}`);
+console.log(`Private Key (base64): ${privateKey}\n`);
 
-// Get the private key and encode it as base64
-const privateKey = Buffer.from(recipientKeypair.secretKey).toString('base64');
-
-// Console output
-console.log('Generated test recipient wallet:');
-console.log('Public Key (address):', publicKey);
-console.log('Private Key (base64):', privateKey);
-
-// Save to recipient-wallet.json
+// Save wallet data to file
 const walletData: WalletData = {
   publicKey,
   privateKey
 };
 
-fs.writeFileSync('recipient-wallet.json', JSON.stringify(walletData, null, 2));
-console.log('\nRecipient wallet saved to recipient-wallet.json');
+fs.writeFileSync(
+  'recipient-wallet.json',
+  JSON.stringify(walletData, null, 2)
+);
 
-// Read the test tokens
-try {
-  const testTokensFile = fs.readFileSync('test-tokens.json', 'utf-8');
-  const testTokens = JSON.parse(testTokensFile) as TestTokens;
-  
-  console.log('\nTest command to airdrop tokens to this recipient:');
-  console.log(`curl -X POST http://localhost:3000/airdrop \\
-  -H "Content-Type: application/json" \\
-  -d '{"pubkey":"${publicKey}","pubkeys":${JSON.stringify(testTokens.tokenMints)}}'`);
-} catch (err) {
-  const error = err as Error;
-  console.log('\nNo test tokens found. Run setup-test-tokens.ts first.');
-} 
+console.log(`Wallet data saved to recipient-wallet.json\n`);
+
+// Show test commands
+console.log(`To check if this wallet is eligible for an airdrop:`);
+console.log(`curl http://localhost:10000/airdrop/check/${publicKey}\n`);
+
+console.log(`To airdrop tokens to this wallet:`);
+console.log(`curl -X POST http://localhost:10000/airdrop -H "Content-Type: application/json" -d '{"pubkey":"${publicKey}"}'\n`);
+
+console.log(`To check the wallet's balance on Solana Explorer:`);
+console.log(`https://explorer.solana.com/address/${publicKey}?cluster=devnet`); 
