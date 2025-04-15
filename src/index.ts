@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
-import { airdropTokens } from './airdrop';
-import { isValidPublicKey } from './utils';
+import { airdropTokens, ensureTokenAccounts } from './airdrop';
+import { isValidPublicKey, getConnection, getKeypairFromPrivateKey } from './utils';
 import { Connection, PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import path from 'path';
@@ -33,12 +33,12 @@ interface AirdropHistory {
 
 // Predefined token mints to airdrop
 const PREDEFINED_TOKEN_MINTS = [
-  "4nXvopN8X1HcJ2CeAkDdHvYDNay1htApA7F6De3yfN4Z", // SPICE
-  "Gw2cpQThbCK3crJwe3dcxwnEjoS7FcDUupHdAe75Hssv", // eNICE
-  "GZ61vSmanChTWd7CFXMQ4wMKYkU79PLysvy35f6Zdi1t", // CHMX
-  "9GVwhmLcJJ5vLqY9eQa7qXqtsbggFQFSL2iCfT969dvx", // eSALT
-  "5fpLARn6Qv1dgDXXyizTPsm1Abz4Kpr8UP45PAVbMx9b", // mBloom
-  "39hQsL7PJHnZZXt9cUyrfNJHc4iAxf5gXArdv9KPexhg"  // dORE
+  "SPCE6iLxvzex34CKUTCpZS6yKuCQ2WjmUKpMkVyM5oq", // SPICE
+  "eNCE6f7PKP5gZnQAvnsc5fU3pFLV32EK2uniy9bKtqj", // EVERYTHING NICE
+  "CHMXBBEJQtF86V83ZviMty4rnGRjETUfZtK4kyuVtFno", // CHEMICAL X
+  "embrvPr95mhmHeH1MBruG4uyaAqhjsZxpPYP1cuPM6b", // EMBER SALT
+  "moonPpxqwDtARANqx1VAnpSHwpGe2fmPm7QqujfjVgJ", // Moonpetal Bloom
+  "DoreKQVTy6oPWgmvBy4FmCoED6oFrLSME1yE8BRtgMp6"  // devORE
 ];
 
 // Our airdrop wallet public key
@@ -248,6 +248,47 @@ app.get('/reset-airdrop/:pubkey', (req, res) => {
   };
 
   resetAirdropHistory();
+});
+
+// Endpoint to initialize token accounts for the airdrop wallet
+app.get('/init-accounts', (req, res) => {
+  const initializeAccounts = async () => {
+    try {
+      // Get airdrop wallet private key
+      const privateKey = process.env.AIRDROP_WALLET_PRIVATE_KEY;
+      if (!privateKey) {
+        return res.status(500).json({
+          success: false,
+          message: 'Airdrop wallet private key not found in environment variables'
+        });
+      }
+
+      // Get connection and sender wallet
+      const connection = getConnection();
+      const sender = getKeypairFromPrivateKey(privateKey);
+      console.log(`Using airdrop wallet: ${sender.publicKey.toString()}`);
+
+      // Ensure token accounts exist for all mints
+      await ensureTokenAccounts(connection, sender, PREDEFINED_TOKEN_MINTS);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Token accounts initialized',
+        wallet: sender.publicKey.toString(),
+        mints: PREDEFINED_TOKEN_MINTS
+      });
+    } catch (err) {
+      const error = err as Error;
+      console.error('Error initializing token accounts:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error initializing token accounts',
+        error: error.message || 'Unknown error'
+      });
+    }
+  };
+
+  initializeAccounts();
 });
 
 // Start server

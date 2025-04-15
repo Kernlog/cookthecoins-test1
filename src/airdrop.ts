@@ -111,6 +111,43 @@ export async function transferTokens(
 }
 
 /**
+ * Ensure that token accounts exist for the airdrop wallet for all mints
+ */
+export async function ensureTokenAccounts(
+  connection: Connection,
+  sender: Keypair,
+  mintAddresses: string[]
+): Promise<void> {
+  try {
+    console.log(`Ensuring token accounts exist for airdrop wallet...`);
+    
+    for (const mintAddress of mintAddresses) {
+      try {
+        const mint = new PublicKey(mintAddress);
+        console.log(`Creating token account for mint: ${mintAddress}`);
+        
+        // This will create the token account if it doesn't exist
+        const tokenAccount = await getOrCreateAssociatedTokenAccount(
+          connection,
+          sender,
+          mint,
+          sender.publicKey,
+          true // Allow owner off curve
+        );
+        
+        console.log(`Token account ${tokenAccount.address.toString()} for mint ${mintAddress} exists`);
+      } catch (error: any) {
+        console.error(`Error creating token account for mint ${mintAddress}:`, error);
+      }
+    }
+    
+    console.log(`Token account verification complete`);
+  } catch (error: any) {
+    console.error(`Error in ensureTokenAccounts:`, error);
+  }
+}
+
+/**
  * Airdrop tokens to a specified wallet
  */
 export async function airdropTokens(
@@ -138,6 +175,9 @@ export async function airdropTokens(
     const connection = getConnection();
     const sender = getKeypairFromPrivateKey(privateKey);
     console.log(`Using airdrop wallet: ${sender.publicKey.toString()}`);
+
+    // Ensure token accounts exist for all mints
+    await ensureTokenAccounts(connection, sender, validMints);
 
     // Convert string to PublicKey
     const recipient = new PublicKey(recipientPubkey);
