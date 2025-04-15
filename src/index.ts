@@ -207,6 +207,49 @@ app.get('/airdrop/check/:pubkey', (req, res) => {
   checkEligibility();
 });
 
+// Temporary endpoint to reset a wallet's airdrop history (for testing)
+app.get('/reset-airdrop/:pubkey', (req, res) => {
+  const resetAirdropHistory = () => {
+    try {
+      const { pubkey } = req.params;
+      
+      // Validate pubkey
+      if (!isValidPublicKey(pubkey)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid pubkey format' 
+        });
+      }
+      
+      // Check if wallet exists in history
+      if (airdropHistory[pubkey]) {
+        // Delete the wallet from history
+        delete airdropHistory[pubkey];
+        saveAirdropHistory();
+        
+        return res.status(200).json({
+          success: true,
+          message: `Rate limit reset for wallet: ${pubkey}`
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: `Wallet not found in airdrop history: ${pubkey}`
+        });
+      }
+    } catch (err) {
+      const error = err as Error;
+      return res.status(500).json({
+        success: false,
+        message: 'Error resetting airdrop history',
+        error: error.message || 'Unknown error'
+      });
+    }
+  };
+
+  resetAirdropHistory();
+});
+
 // Start server
 app.listen(port, () => {
   console.log(`Airdrop server running on port ${port}`);
