@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
-import { airdropTokens, ensureTokenAccounts } from './airdrop';
-import { isValidPublicKey, getConnection, getKeypairFromPrivateKey } from './utils';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { airdropTokens } from './airdrop';
+import { isValidPublicKey } from './utils';
+import { PublicKey } from '@solana/web3.js';
 import fs from 'fs';
 import path from 'path';
 import { getAccount } from '@solana/spl-token';
@@ -249,83 +249,6 @@ app.get('/reset-airdrop/:pubkey', (req, res) => {
   };
 
   resetAirdropHistory();
-});
-
-// Endpoint to initialize token accounts for the airdrop wallet
-app.get('/init-accounts', (req, res) => {
-  const initializeAccounts = async () => {
-    try {
-      // Get airdrop wallet private key
-      const privateKey = process.env.AIRDROP_WALLET_PRIVATE_KEY;
-      if (!privateKey) {
-        return res.status(500).json({
-          success: false,
-          message: 'Airdrop wallet private key not found in environment variables'
-        });
-      }
-
-      // Get connection and sender wallet
-      const connection = getConnection();
-      const sender = getKeypairFromPrivateKey(privateKey);
-      console.log(`Using airdrop wallet: ${sender.publicKey.toString()}`);
-
-      // Ensure token accounts exist for all mints
-      await ensureTokenAccounts(connection, sender, PREDEFINED_TOKEN_MINTS);
-
-      // Get token account information
-      const tokenAccountsInfo = [];
-      for (const mintAddress of PREDEFINED_TOKEN_MINTS) {
-        try {
-          const mint = new PublicKey(mintAddress);
-          const accounts = await connection.getParsedTokenAccountsByOwner(
-            sender.publicKey,
-            { mint }
-          );
-          
-          if (accounts.value.length > 0) {
-            const tokenAccount = accounts.value[0];
-            const accountInfo = tokenAccount.account.data.parsed.info;
-            
-            tokenAccountsInfo.push({
-              mint: mintAddress,
-              tokenAccount: tokenAccount.pubkey.toString(),
-              balance: accountInfo.tokenAmount.uiAmount
-            });
-          } else {
-            tokenAccountsInfo.push({
-              mint: mintAddress,
-              tokenAccount: 'Not found',
-              balance: 0
-            });
-          }
-        } catch (error: any) {
-          console.error(`Error getting token account info for ${mintAddress}:`, error);
-          tokenAccountsInfo.push({
-            mint: mintAddress,
-            tokenAccount: 'Error',
-            error: error.message
-          });
-        }
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: 'Token accounts initialized',
-        wallet: sender.publicKey.toString(),
-        tokenAccounts: tokenAccountsInfo
-      });
-    } catch (err) {
-      const error = err as Error;
-      console.error('Error initializing token accounts:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Error initializing token accounts',
-        error: error.message || 'Unknown error'
-      });
-    }
-  };
-
-  initializeAccounts();
 });
 
 // Start server
